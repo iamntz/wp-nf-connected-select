@@ -16,6 +16,9 @@ class ConnectedSelect {
     add_action( 'init', array( $this, 'init' ) );
     add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
     add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
+
+    add_action( 'wp_ajax_ntz_ninja_get_connected', array( $this, 'get_options_tags' ) );
+    add_action( 'wp_ajax_nopriv_ntz_ninja_get_connected', array( $this, 'get_options_tags' ) );
   }
 
 
@@ -51,6 +54,9 @@ class ConnectedSelect {
 
   public function assets(){
     wp_register_script( 'ntz-ninja', plugins_url( 'assets/javascripts/ntz-ninja.js', __FILE__ ), array('jquery'), '1.0', true );
+    wp_localize_script( 'ntz-ninja', 'ntz_ninja', array(
+      'nonce' => wp_create_nonce( "ntz-ninja-connected-select" )
+    ) );
     wp_enqueue_script( 'ntz-ninja' );
 
   }
@@ -80,44 +86,6 @@ class ConnectedSelect {
   }
 
 
-  public function display_select( $field_id, $data ){
-    global $wpdb, $ninja_forms_fields;
-
-    $field_row   = ninja_forms_get_field_by_id( $field_id );
-    $field_class = ninja_forms_get_field_class( $field_id );
-    $type        = $field_row['type'];
-    $type_name   = $ninja_forms_fields[$type]['name'];
-    $label_pos   = isset( $data['label_pos'] ) ? $data['label_pos'] : 'left';
-    $label       = isset( $data['label'] ) ? $data['label'] : $type_name;
-
-    $fetch_url  = $data['ntz_remote_url'];
-    $fetch_url  = str_ireplace( '{home}', '', $fetch_url );
-    $connect_to = $data['connect_to'];
-    $disabled   = "";
-
-    if($label_pos == 'inside'){
-      $initial_value = sprintf( '<option value="" data-default_option="1">%s</option>', $label );
-      $initial_value .= sprintf( '<option value="">%s</option>', $label );
-      $initial_value .= sprintf( '<option value="">%s</option>', $label );
-      $initial_value .= sprintf( '<option value="">%s</option>', $label );
-      $initial_value .= sprintf( '<option value="">%s</option>', $label );
-    }
-
-    $field_class .= ' js-ntz-ninjaForms-connectedSelect';
-
-
-    printf(
-      '<select class="ninja_forms_field_%s" id="%s" data-fetch_url="%s" data-connected_to="%s"%s>%s</select>',
-      $field_class,
-      $field_id,
-      $fetch_url,
-      $connect_to,
-      $disabled,
-      $initial_value
-    );
-  }
-
-
   public function get_siblings_connects( $field_id ){
     $current_form = ninja_forms_get_form_by_field_id( $field_id );
     $form_fields = ninja_forms_get_fields_by_form_id( $current_form['id'] );
@@ -132,6 +100,86 @@ class ConnectedSelect {
     }
 
     return join( $options, "\n" );
+  }
+
+
+
+  /* AJAX Helper
+  ***************************/
+
+  public function get_options_tags(){
+    check_ajax_referer( 'ntz-ninja-connected-select', 'nonce' );
+    $selects = apply_filters( 'ntz/ninja-forms/connected-select/select_data', '' );
+    echo $selects;
+    die();
+  }
+
+
+
+  /* Frontend Fields
+  ***************************/
+
+  public function display_select( $field_id, $data ){
+
+    $field_row   = ninja_forms_get_field_by_id( $field_id );
+    $type        = $field_row['type'];
+
+    $label_pos   = isset( $data['label_pos'] ) ? $data['label_pos'] : 'left';
+    $label       = isset( $data['label'] ) ? $data['label'] : '';
+
+    if($label_pos == 'inside'){
+      $initial_value = sprintf( '<option value="" data-default_option="1">%s</option>', $label );
+    }
+
+    $field_class = ninja_forms_get_field_class( $field_id );
+    $field_class .= ' js-ntz-ninjaForms-connectedSelect';
+
+    $otherAttributes = array();
+    $otherAttributes[] = $this->get_fetch_url( $field_id, $data );
+    $otherAttributes[] = $this->get_connected_to( $field_id, $data );
+    $otherAttributes[] = $this->get_selected_value( $field_id, $data );
+
+    printf(
+      '<select class="ninja_forms_field_%1$s" id="%2$s" name="ninja_forms_field_%2$s"%3$s>%4$s</select>',
+      $field_class,
+      $field_id,
+      join( $otherAttributes, ' ' ),
+      $initial_value
+    );
+  }
+
+
+  protected function get_selected_value( $field_id, $data ){
+    global $ninja_forms_processing;
+    if( !isset( $ninja_forms_processing ) ){ return; }
+    $value = $ninja_forms_processing->get_field_value( $field_id );
+      return sprintf( 'data-value="%s"', $value );
+    if( !empty( $value ) ){
+    }
+  }
+
+
+  protected function get_connected_to( $field_id, $data ){
+    $connect_to = $data['connect_to'];
+    $disabled   = "";
+
+    if( !empty( $connect_to ) ){
+      $connect_to = sprintf( 'data-connected_to="%s"', $connect_to );
+    }
+
+    return $connect_to;
+  }
+
+
+  protected function get_fetch_url( $field_id, $data ){
+    $fetch_url  = $data['ntz_remote_url'];
+    $fetch_url  = str_ireplace( '{home}', get_home_url(), $fetch_url );
+    $fetch_url  = apply_filters( "ntz/ninja-forms/connected-select/fetch-url", $fetch_url );
+    if ( !empty( $fetch_url ) ){
+      $fetch_url = sprintf( 'data-fetch_url="%s"', $fetch_url );
+    }
+
+    return $fetch_url;
   }
 }
 
