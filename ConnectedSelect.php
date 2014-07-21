@@ -14,8 +14,8 @@ class ConnectedSelect {
   protected $existing_forms = array();
   function __construct() {
     add_action( 'init', array( $this, 'init' ) );
-    add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
-    add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
+    add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+    add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 
     add_action( 'wp_ajax_ntz_ninja_get_connected', array( $this, 'get_options_tags' ) );
     add_action( 'wp_ajax_nopriv_ntz_ninja_get_connected', array( $this, 'get_options_tags' ) );
@@ -41,6 +41,13 @@ class ConnectedSelect {
           'name'          => 'connect_to',
           'default_value' => 0
         ),
+
+        array(
+          'type'          => 'text',
+          'label'         => 'Extra Parameters to send',
+          'name'          => 'extra_param',
+          'class'         => 'widefat'
+        ),
       ),
 
       'display_function' => array( $this, 'display_select' ),
@@ -51,20 +58,27 @@ class ConnectedSelect {
     ninja_forms_register_field( 'connected_select', $args );
   }
 
-
-  public function assets(){
+  protected function register_assets(){
+    wp_register_script( 'ntz-ninja-admin', plugins_url( '/assets/javascripts/ntz-ninja-admin.js', __FILE__ ), array('jquery'), '1.0', true );
     wp_register_script( 'ntz-ninja', plugins_url( 'assets/javascripts/ntz-ninja.js', __FILE__ ), array('jquery'), '1.0', true );
+
     wp_localize_script( 'ntz-ninja', 'ntz_ninja', array(
       'nonce' => wp_create_nonce( "ntz-ninja-connected-select" )
     ) );
-    wp_enqueue_script( 'ntz-ninja' );
-
   }
 
-  public function admin_assets( $hook ){
+  public function enqueue_assets(){
+    $this->register_assets();
+    wp_enqueue_script( 'ntz-ninja' );
+  }
+
+  public function enqueue_admin_assets( $hook ){
+    $this->register_assets();
     if( $hook == 'toplevel_page_ninja-forms' ){
-      wp_register_script( 'ntz-ninja-admin', plugins_url( '/assets/javascripts/ntz-ninja-admin.js', __FILE__ ), array('jquery'), '1.0', true );
       wp_enqueue_script( 'ntz-ninja-admin' );
+    }
+    if( $hook == 'forms_page_ninja-forms-subs' ){
+      wp_enqueue_script( 'ntz-ninja' );
     }
   }
 
@@ -128,7 +142,7 @@ class ConnectedSelect {
     $label       = isset( $data['label'] ) ? $data['label'] : '';
 
     if($label_pos == 'inside'){
-      $initial_value = sprintf( '<option value="" data-default_option="1">%s</option>', $label );
+      $initial_value = sprintf( '<option value="-null-" data-default_option="1">%s</option>', $label );
     }
 
     $field_class = ninja_forms_get_field_class( $field_id );
@@ -138,6 +152,7 @@ class ConnectedSelect {
     $otherAttributes[] = $this->get_fetch_url( $field_id, $data );
     $otherAttributes[] = $this->get_connected_to( $field_id, $data );
     $otherAttributes[] = $this->get_selected_value( $field_id, $data );
+    $otherAttributes[] = sprintf( 'data-extra_param="%s"', $data['extra_param'] );
 
     printf(
       '<select class="ninja_forms_field_%1$s" id="%2$s" name="ninja_forms_field_%2$s"%3$s>%4$s</select>',
@@ -150,12 +165,8 @@ class ConnectedSelect {
 
 
   protected function get_selected_value( $field_id, $data ){
-    global $ninja_forms_processing;
-    if( !isset( $ninja_forms_processing ) ){ return; }
-    $value = $ninja_forms_processing->get_field_value( $field_id );
-      return sprintf( 'data-value="%s"', $value );
-    if( !empty( $value ) ){
-    }
+    if( isset( $data['default_value'] ) )
+    return sprintf( 'data-value="%s"', $data['default_value'] );
   }
 
 

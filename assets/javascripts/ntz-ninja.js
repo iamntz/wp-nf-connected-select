@@ -31,22 +31,24 @@
     ,getRemote: function( select ){
       var parent = $(select).data('connected_to');
       var options = {
-        action: 'ntz_ninja_get_connected',
-        nonce : ntz_ninja.nonce,
-        parent: parent,
-        parent_value : this.el.val(),
-        name : select.name
+        action      : 'ntz_ninja_get_connected',
+        nonce       : ntz_ninja.nonce,
+        parent      : parent,
+        parent_value: this.el.val(),
+        name        : select.name,
+        param       : $(select).data('extra_param')
       };
 
+      $(select).addClass('loading');
       $.get( this.fetch_url, options, $.proxy( this.populateData, this, select ) );
     }//getRemote
 
 
     ,populateData: function( select, data ){
-      $(select).find('option:not([data-default_option])').remove();
+      $(select).find('option:not([data-default_option="1"])').remove();
       $(select).append( data );
       this.setValue( this.el );
-      $(select).trigger('ntz-ninja/data-populated');
+      $(select).trigger('ntz-ninja/data-populated').removeClass('loading');
     }//populateData
 
 
@@ -58,8 +60,10 @@
     ,setValue: function( select ){
       select = $(select);
       var value = select.data('value');
-      if( value && select.val() != value ){
-        select.val( value ).trigger('change');
+      if( value && !select.data('value-is-set') && value != '-null-' && select.val() != value ){
+        $('option[value="' + value + '"]', select).attr('selected', true);
+        select.trigger('change');
+        select.data('value-is-set', true);
       }
     }//setValue
 

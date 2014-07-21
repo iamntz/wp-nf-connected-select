@@ -2,13 +2,14 @@
 
 // Adding a region/city connected selector
 
+
 add_filter( 'ntz/ninja-forms/connected-select/select_data', 'ntz_ninja_connected_select_data' );
 
 function ntz_ninja_connected_select_data( $data ){
   global $wpdb;
   $data = '';
 
-  if( empty( $_REQUEST['parent_value'] ) ){
+  if( isset( $_REQUEST['param'] ) &&  $_REQUEST['param'] == 'get_region' ){
     $regions = $wpdb->get_results( "SELECT * FROM `regions` WHERE `country`='IT'" );
     foreach ( $regions as $key => $region ) {
       if( empty( $region->name ) ){ continue; }
