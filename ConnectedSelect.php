@@ -142,7 +142,7 @@ class ConnectedSelect {
     $label       = isset( $data['label'] ) ? $data['label'] : '';
 
     if($label_pos == 'inside'){
-      $initial_value = sprintf( '<option value="-null-" data-default_option="1">%s</option>', $label );
+      $initial_value = sprintf( '<option value="" data-default_option="1">%s</option>', $label );
     }
 
     $field_class = ninja_forms_get_field_class( $field_id );
@@ -155,7 +155,7 @@ class ConnectedSelect {
     $otherAttributes[] = sprintf( 'data-extra_param="%s"', $data['extra_param'] );
 
     printf(
-      '<select class="ninja_forms_field_%1$s" id="%2$s" name="ninja_forms_field_%2$s"%3$s>%4$s</select>',
+      '<select class="ninja_forms_field_%1$s"  rel="%2$s" id="%2$s" name="ninja_forms_field_%2$s"%3$s>%4$s</select>',
       $field_class,
       $field_id,
       join( $otherAttributes, ' ' ),

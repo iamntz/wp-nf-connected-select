@@ -60,7 +60,7 @@
     ,setValue: function( select ){
       select = $(select);
       var value = select.data('value');
-      if( value && !select.data('value-is-set') && value != '-null-' && select.val() != value ){
+      if( value && !select.data('value-is-set') && value != '' && select.val() != value ){
         $('option[value="' + value + '"]', select).attr('selected', true);
         select.trigger('change');
         select.data('value-is-set', true);
